@@ -15,9 +15,10 @@ MVP de uma API Go (Gin + sqlx) pensada para evoluir em um SaaS multi-tenant dest
 - `tools/goose.conf`: configuração para executar migrations (usa `DATABASE_URL`).
 
 ## Como Rodar
-1. Defina `APP_DB_URL` ou use default (`postgres://postgres:postgres@localhost:5432/smartscheduling?sslmode=disable`).
-2. Rode migrations: `DATABASE_URL=$APP_DB_URL goose -dir migrations up`.
-3. Inicie a API: `go run ./cmd/api`.
+1. Copie `.env` e ajuste as variáveis conforme necessário (o padrão aponta para o Postgres Docker na porta 5433).
+2. Suba a infra local: `docker compose up -d`.
+3. Rode migrations: `GOOSE_DRIVER=postgres GOOSE_DBSTRING=$APP_DB_URL goose -dir migrations up`.
+4. Inicie a API: `go run ./cmd/api`.
 
 Endpoints disponíveis (MVP):
 - `GET /health`

@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,12 +15,11 @@ import (
 )
 
 type Handler struct {
-	db  *sqlx.DB
-	cfg config.AuthConfig
+	service *Service
 }
 
 func NewHandler(db *sqlx.DB, cfg config.AuthConfig) *Handler {
-	return &Handler{db: db, cfg: cfg}
+	return &Handler{service: NewService(db, cfg)}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
@@ -34,7 +33,9 @@ type loginRequest struct {
 }
 
 type loginResponse struct {
-	Token string `json:"token"`
+	Token  string        `json:"token"`
+	User   domain.User   `json:"user"`
+	Tenant domain.Tenant `json:"tenant"`
 }
 
 type Claims struct {
@@ -72,30 +73,60 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 
-	// TODO: replace with real user lookup
-	claims := &Claims{
-		TenantID: 1,
-		UserID:   1,
-		Role:     domain.RoleOwner,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			Issuer:    h.cfg.JWTIssuer,
-			Subject:   "1",
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(h.cfg.JWTSecret))
+	ctx := c.Request.Context()
+	resp, err := h.service.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+		if errors.Is(err, ErrInvalidCredentials) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
 		return
 	}
 
-	c.JSON(http.StatusOK, loginResponse{Token: signed})
+	c.JSON(http.StatusOK, loginResponse{Token: resp.Token, User: resp.User, Tenant: resp.Tenant})
+}
+
+type registerRequest struct {
+	TenantName string          `json:"tenant_name" binding:"required"`
+	Name       string          `json:"name" binding:"required"`
+	Email      string          `json:"email" binding:"required,email"`
+	Password   string          `json:"password" binding:"required,min=6"`
+	Role       domain.UserRole `json:"role" binding:"required"`
 }
 
 func (h *Handler) register(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{"status": "registered"})
+	var req registerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, tenant, err := h.service.Register(ctx, RegisterInput{
+		TenantName: req.TenantName,
+		Name:       req.Name,
+		Email:      req.Email,
+		Password:   req.Password,
+		Role:       req.Role,
+	})
+	if err != nil {
+		status := http.StatusBadRequest
+		message := err.Error()
+		if errors.Is(err, ErrEmailInUse) {
+			message = "email already in use"
+		} else if !errors.Is(err, ErrEmailInUse) && !errors.Is(err, ErrInvalidCredentials) {
+			status = http.StatusInternalServerError
+			message = "registration failed"
+		}
+		c.JSON(status, gin.H{"error": message})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"tenant": tenant,
+		"user":   user,
+	})
 }
 
 func JWTMiddleware(cfg config.AuthConfig) gin.HandlerFunc {

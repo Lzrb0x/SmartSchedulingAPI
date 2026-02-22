@@ -19,7 +19,7 @@ type HTTPConfig struct {
 }
 
 type DatabaseConfig struct {
-	URL            string `envconfig:"URL" default:"postgres://postgres:postgres@localhost:5432/smartscheduling?sslmode=disable"`
+	URL            string `envconfig:"URL" default:"postgres://postgres:postgres@localhost:5433/smartscheduling?sslmode=disable"`
 	MaxOpenConns   int    `envconfig:"MAX_OPEN_CONNS" default:"10"`
 	MaxIdleConns   int    `envconfig:"MAX_IDLE_CONNS" default:"5"`
 	ConnMaxIdleSec int    `envconfig:"MAX_IDLE_SECONDS" default:"60"`

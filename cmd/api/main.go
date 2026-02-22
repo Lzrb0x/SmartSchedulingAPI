@@ -5,12 +5,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
+
 	"github.com/Lzrb0x/SmartSchedulingAPI/internal/config"
 	"github.com/Lzrb0x/SmartSchedulingAPI/internal/database"
 	"github.com/Lzrb0x/SmartSchedulingAPI/internal/server"
 )
 
 func main() {
+	_ = godotenv.Load()
+
 	ctx := context.Background()
 
 	cfg, err := config.Load()

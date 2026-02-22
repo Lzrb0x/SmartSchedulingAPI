@@ -18,14 +18,14 @@ const (
 )
 
 type User struct {
-	ID        int64     `db:"id" json:"id"`
-	TenantID  int64     `db:"tenant_id" json:"tenant_id"`
-	Name      string    `db:"name" json:"name"`
-	Email     string    `db:"email" json:"email"`
-	Password  string    `db:"password_hash" json:"-"`
-	Role      UserRole  `db:"role" json:"role"`
-	Active    bool      `db:"active" json:"active"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	ID           int64     `db:"id" json:"id"`
+	TenantID     int64     `db:"tenant_id" json:"tenant_id"`
+	Name         string    `db:"name" json:"name"`
+	Email        string    `db:"email" json:"email"`
+	PasswordHash string    `db:"password_hash" json:"-"`
+	Role         UserRole  `db:"role" json:"role"`
+	Active       bool      `db:"active" json:"active"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }
 
 type Barbershop struct {
